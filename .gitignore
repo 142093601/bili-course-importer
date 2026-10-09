@@ -1,0 +1,19 @@
+# ⚠️ 绝对不能提交：B站登录 cookie（含 SESSDATA，等于账号密码）
+cookies*.txt
+bili_only_cookies.txt
+*.cookies
+cookies.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 运行产物 / 临时文件
+output/
+tmp/
+*.bak
+*.log
+.DS_Store
