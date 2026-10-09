@@ -58,6 +58,9 @@ output/<课程名>/
 ## 技术要点（踩坑记录）
 
 - 字幕 CDN（hdslb.com）**拒绝带 Referer/Cookie 的请求**（HTTP 400），只能带 UA
+- **多语言 AI 字幕轨按「语言优先序（中文在前）」选，同语言内才比长度** —— 不能只取最长文本：
+  B 站多语言视频常给 8 条轨，翻译轨往往比中文原稿长得多（实测 `BV1hkYc6uEg6`：中文 2508 字 vs 西语 12567 字，
+  只比长度会把中文视频读成西语稿）。产出里会把选中的轨道标出来，如 `AI字幕(ai-zh)`
 - 多 P 视频的 cid 必须从 view API 拿（yt-dlp 分 P 条目不返回 cid）
 - cookies.txt 若含全站 cookie，需过滤出 bilibili 域名并规范 Netscape 格式（带点域名要求 include_subdomains=TRUE）
 - 版权提醒：整理成个人学习笔记没问题；对外分发/商用前请确认 UP 主授权或选择开放许可内容

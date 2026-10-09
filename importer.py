@@ -238,12 +238,17 @@ def parse_bili_subtitle(data):
     return None
 
 
+# 字幕轨语言优先序（中文在前）：B 站多语言视频会给 8 条 AI 字幕轨（zh/en/ja/es/ar/pt/th/id），
+# 翻译轨常比中文原稿长得多，只按长度挑会把中文视频读成外语稿。同语言内才比长度。
+SUB_LANG_PREF = ("ai-zh", "zh-cn", "zh-hans", "zh-hant", "zh")
+
+
 def fetch_subtitle(lesson, cookie_str):
     """wbi 签名后请求 player 接口取字幕（登录态下 AI 字幕可用）。"""
     try:
         d = wbi_get("/x/player/wbi/v2", {"bvid": lesson["bvid"], "cid": lesson["cid"], "fnval": "16"}, cookie_str)
         subs = (d.get("data") or {}).get("subtitle", {}).get("subtitles") or []
-        best, best_src = None, ""
+        best, best_src, best_score, best_lan = None, "", None, ""
         for s in subs:
             if not s.get("subtitle_url"):
                 continue
@@ -254,11 +259,20 @@ def fetch_subtitle(lesson, cookie_str):
             r = requests.get(u, headers={"User-Agent": UA}, timeout=20)
             r.raise_for_status()
             text = parse_bili_subtitle(r.json())
-            if text and (best is None or len(text) > len(best)):
-                best = text
-                best_src = "AI字幕" if ("ai_subtitle" in u or "ai_" in s.get("lan", "")) else "CC字幕"
+            if not text:
+                continue
+            # 选轨规则：**先按语言优先序（中文在前），同语言内才比长度**。
+            # 不能只比长度 —— B 站多语言视频常给 8 条 AI 字幕轨，翻译轨往往比中文原稿长得多，
+            # 只挑最长会把中文视频读成西语/英语稿（实测 BV1hkYc6uEg6：es 12567 字 vs zh 2508 字）。
+            lan = str(s.get("lan") or "").strip().lower()
+            rank = next((i for i, p in enumerate(SUB_LANG_PREF) if lan.startswith(p)), len(SUB_LANG_PREF))
+            score = (rank, -len(text))
+            if best_score is None or score < best_score:
+                best, best_score = text, score
+                best_src = "AI字幕" if ("ai_subtitle" in u or "ai_" in lan) else "CC字幕"
+                best_lan = lan
         if best:
-            return best, best_src
+            return best, f"{best_src}({best_lan})" if best_lan else best_src
         return None, "无字幕(需转录兜底)"
     except Exception as e:
         return None, f"字幕接口失败({type(e).__name__})"
